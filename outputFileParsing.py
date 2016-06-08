@@ -1,6 +1,6 @@
 import os
 import datetime
-import numpy as np
+import sys
 
 def getIndirectCalls(filename='beanstalkd.out', verbose=False):
     callSitesWithNoTargets = 0
@@ -170,7 +170,14 @@ def generateComparison(directory='Analyzed', comparisonDirectory1='output', comp
             print compare1, " Does Not Match with ", compare2
 
 if __name__ == '__main__':
-    totalAnalyzed, emptyFiles, targets, calls, directoryStats = generateStatistics(outputDirectory='output',verbose=False, pattern='.out')
+
+    directory = 'Analyzed'
+    outDir = 'Results'
+    fileExtension = '.bc.results'
+    verbose=False
+
+    totalAnalyzed, emptyFiles, targets, calls, directoryStats = generateStatistics(directory=directory, outputDirectory=outDir, verbose=verbose, pattern=fileExtension)
+
 
     printStat = sorted(directoryStats.items(), key=lambda x: x[1][3], reverse=True)
     for stat in printStat:
@@ -181,8 +188,7 @@ if __name__ == '__main__':
     print "Indirect calls :", sum(calls)
     print "Total targets :", sum(targets)
     print "Average targets per call :", sum(targets)/ float(sum(calls))
-    # for stat in directoryStats:
-    #     print stat, ":", directoryStats[stat]
+
     # generateComparison()
 
 
