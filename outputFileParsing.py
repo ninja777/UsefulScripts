@@ -1,6 +1,6 @@
 import os
 import datetime
-import sys
+import argparse
 
 def getIndirectCalls(filename='beanstalkd.out', verbose=False):
     callSitesWithNoTargets = 0
@@ -30,13 +30,13 @@ def getIndirectCalls(filename='beanstalkd.out', verbose=False):
         prevLine = line
     return count, indirectCalls, callSitesWithNoTargets
 
-def getFileCounts(directory, verbose=False, pattern = 'out'):
+def getFileCounts(directory, verbose=False, pattern = 'out', excludePattern='.opt.bc.results'):
     files = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
     emptyCount = 0
     count = 0
     for f in files:
         f = os.path.join(directory, f)
-        if not f.endswith(pattern):
+        if f.endswith(excludePattern) or (not f.endswith(pattern)):
             continue
         count += 1
         statinfo = os.stat(f)
@@ -46,7 +46,7 @@ def getFileCounts(directory, verbose=False, pattern = 'out'):
             emptyCount += 1
     return count, emptyCount
 
-def generateStatistics(directory='Analyzed', outputDirectory='output', verbose=False, pattern = 'out'):
+def generateStatistics(directory='Analyzed', outputDirectory='output', verbose=False, pattern = 'out', excludePattern='.opt.bc.results'):
     totalAnalyzed = []
     emptyFiles = []
     targets = []
@@ -57,7 +57,7 @@ def generateStatistics(directory='Analyzed', outputDirectory='output', verbose=F
         path = os.path.join(os.path.abspath(directory), dir)
         output = os.path.join(path,outputDirectory)
         # print output
-        total, empties = getFileCounts(output, verbose=verbose, pattern=pattern)
+        total, empties = getFileCounts(output, verbose=verbose, pattern=pattern, excludePattern=excludePattern)
         totalAnalyzed.append(total)
         emptyFiles.append(empties)
 
@@ -69,7 +69,7 @@ def generateStatistics(directory='Analyzed', outputDirectory='output', verbose=F
 
         for _, _, outputFiles in os.walk(output):
             for eachFile in outputFiles:
-                if eachFile.endswith(pattern):
+                if eachFile.endswith(pattern) and (not eachFile.endswith(excludePattern)):
                     if verbose:
                         print "generateStatistics :: current file :", os.path.join(output, eachFile)
                     count, indirectCalls, callwithNoTargets = getIndirectCalls(filename=os.path.join(output, eachFile), verbose=verbose)
@@ -170,14 +170,23 @@ def generateComparison(directory='Analyzed', comparisonDirectory1='output', comp
             print compare1, " Does Not Match with ", compare2
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", '--directory', help="base directory of analysis", default='Analyzed',
+                        type=str)
+    parser.add_argument('-o','--output', help='output directory name in the subdirectories', default='output', type=str)
+    parser.add_argument('-e', '--extension', help='Extension of files to be used', default = '.sigout', type=str)
+    parser.add_argument('-x', '--exclude', help='Extension of files to be excluded', default=' ', type=str)
+    parser.add_argument('-v','--verbose', help='Print verbose output',
+                        action="store_false")
 
-    directory = 'Analyzed'
-    outDir = 'Results'
-    fileExtension = '.bc.results'
-    verbose=False
+    args = parser.parse_args()
+    directory = args.directory
+    outDir = args.output
+    fileExtension = args.extension
+    excludePattern = args.exclude
+    verbose=args.verbose
 
-    totalAnalyzed, emptyFiles, targets, calls, directoryStats = generateStatistics(directory=directory, outputDirectory=outDir, verbose=verbose, pattern=fileExtension)
-
+    totalAnalyzed, emptyFiles, targets, calls, directoryStats = generateStatistics(directory=directory, outputDirectory=outDir, verbose=verbose, pattern=fileExtension, excludePattern=excludePattern)
 
     printStat = sorted(directoryStats.items(), key=lambda x: x[1][3], reverse=True)
     for stat in printStat:
