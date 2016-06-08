@@ -53,8 +53,10 @@ def generateStatistics(directory='Analyzed', outputDirectory='output', verbose=F
     calls = []
     directoryStats = {}
     for dir in next(os.walk(directory))[1]:
+        # print dir
         path = os.path.join(os.path.abspath(directory), dir)
         output = os.path.join(path,outputDirectory)
+        # print output
         total, empties = getFileCounts(output, verbose=verbose, pattern=pattern)
         totalAnalyzed.append(total)
         emptyFiles.append(empties)
@@ -168,14 +170,19 @@ def generateComparison(directory='Analyzed', comparisonDirectory1='output', comp
             print compare1, " Does Not Match with ", compare2
 
 if __name__ == '__main__':
-    totalAnalyzed, emptyFiles, targets, calls, directoryStats = generateStatistics(outputDirectory='results',verbose=False, pattern='out')
+    totalAnalyzed, emptyFiles, targets, calls, directoryStats = generateStatistics(outputDirectory='output',verbose=False, pattern='.out')
+
+    printStat = sorted(directoryStats.items(), key=lambda x: x[1][3], reverse=True)
+    for stat in printStat:
+        print stat
+
     print "Total analyzed :", sum(totalAnalyzed)
     print "Empty files :", sum(emptyFiles)
     print "Indirect calls :", sum(calls)
     print "Total targets :", sum(targets)
     print "Average targets per call :", sum(targets)/ float(sum(calls))
-    for stat in directoryStats:
-        print stat, ":", directoryStats[stat]
+    # for stat in directoryStats:
+    #     print stat, ":", directoryStats[stat]
     # generateComparison()
 
 
