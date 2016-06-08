@@ -1,0 +1,217 @@
+#!/usr/bin/python
+# from __future__ import division
+from operator import itemgetter
+import sys
+import re
+import os
+
+
+def usage():
+    print "Usage: " + sys.argv[0] + " <input file>"
+
+
+def main():
+    if len(sys.argv) < 2:
+        usage()
+
+    walk_dir = sys.argv[1]
+    nonEmptyFile = sys.argv[2]
+    nEF_c = open(nonEmptyFile, "w")
+
+    totalNumTargets = 0
+    totalNumCalls = 0
+
+    list_of_tuples = []
+
+    largestNumTargets = 0
+    largestNumTargetFile = ""
+    largestNumTargetCall = 0
+    secondLargest = 0
+    secondLargestFile = ""
+    secondLargestTargetCall = 0
+
+    largestNumCalls = 0
+    largestNumCallsFile = ""
+
+    highestAverage = 0
+    highestAverageFile = ""
+
+    secondHighestAverage = 0
+    secondHighestAverageFile = ""
+
+    totalNumEmptyPolicy = 0
+    totalNumPolicy = 0
+
+    gotPackage = 0
+
+    print('walk_dir = ' + walk_dir)
+
+    # If your current working directory may change during script execution, it's recommended to
+    # immediately convert program arguments to an absolute path. Then the variable root below will
+    # be an absolute path as well. Example:
+    # walk_dir = os.path.abspath(walk_dir)
+    print('walk_dir (absolute) = ' + os.path.abspath(walk_dir))
+
+    for root, subdirs, files in os.walk(walk_dir):
+        # print('--\nroot = ' + root)
+        list_file_path = os.path.join(root, 'my-directory-list.txt')
+        # print('list_file_path = ' + list_file_path)
+
+        # with open(list_file_path, 'wb') as list_file:
+        # for subdir in subdirs:
+        # print('\t- subdirectory ' + subdir)
+
+        for filename in files:
+            file_path = os.path.join(root, filename)
+
+            string = "Transformed"
+            if string not in file_path:
+                string = "Bitcode"
+                if string not in file_path:
+                    string = "output"
+                    if string in file_path:
+                        if(filename.endswith('.out')):
+                            print('\t- file %s (full path: %s)' % (filename, file_path))
+                            totalNumEmptyPolicy += determineEmpty(file_path)
+                            if (determineEmpty(file_path) == 0):
+                                if (gotPackage == 0):
+                                    string = file_path.split("/")
+                                    nEF_c.write(string[1])
+                                    nEF_c.write("\n")
+                                gotPackage = 1
+
+                            totalNumPolicy += 1
+                            tempTotalNumCalls, tempTotalNumTargets = fileRead(file_path)
+                            totalNumCalls += tempTotalNumCalls
+                            totalNumTargets += tempTotalNumTargets
+
+                            if (determineEmpty(file_path) == 0):
+
+                                packageString = file_path.split("/")
+                                binaryString = filename
+
+                                if (tempTotalNumCalls == 0 or tempTotalNumTargets == 0):
+                                    average = 0
+                                else:
+                                    average = float(tempTotalNumTargets) / float(tempTotalNumCalls)
+                                    list_of_tuples.append(
+                                        (tempTotalNumCalls, tempTotalNumTargets, packageString[1], binaryString, average))
+
+                            if (largestNumCalls < tempTotalNumCalls):
+                                largestNumCalls = tempTotalNumCalls
+                                largestNumCallsFile = file_path
+
+                            if (largestNumTargets < tempTotalNumTargets):
+                                secondLargest = largestNumTargets
+                                secondLargestFile = largestNumTargetFile
+                                secondLargestTargetCall = largestNumTargetCall
+                                largestNumTargets = tempTotalNumTargets
+                                largestNumTargetFile = file_path
+                                largestNumTargetCall = tempTotalNumCalls
+
+                            if (tempTotalNumCalls != 0):
+                                if ((tempTotalNumTargets / tempTotalNumCalls) > highestAverage):
+                                    secondHighestAverage = highestAverage
+                                    secondHighestAverageFile = highestAverageFile
+
+                                    highestAverage = tempTotalNumTargets / tempTotalNumCalls
+                                    highestAverageFile = file_path
+
+
+                            # with open(file_path, 'rb') as f:
+                            #   f_content = f.read()
+                            #  list_file.write(('The file %s contains:\n' % filename).encode('utf-8'))
+                            # list_file.write(f_content)
+                            # list_file.write(b'\n')
+        gotPackage = 0
+
+    # list_of_tuples = sorted(list_of_tuples, key=lambda average: list_of_tuples[1])
+    list_of_tuples.sort(key=itemgetter(2), reverse=False)
+
+    for (w, x, y, z, average) in list_of_tuples:
+        print y, "/", z, ":", w, ":", x, ":", average
+
+    print "Largest number of targets from single program: ", largestNumTargets, "Calls: ", largestNumTargetCall
+    print largestNumTargetFile
+    print "Largest number of targets from single program: ", secondLargest, "Calls: ", secondLargestTargetCall
+    print secondLargestFile
+    print "Largest number of calls from single program: ", largestNumCalls
+    print largestNumCallsFile
+    print "Highest average: ", highestAverage
+    print highestAverageFile
+    print "Second highest average: ", secondHighestAverage
+    print secondHighestAverageFile
+
+    print "Total number of indirect calls: ", totalNumCalls
+    print "Total number of function targets: ", totalNumTargets
+
+    print "Total Number of Empty Policies: ", totalNumEmptyPolicy
+    print "Total Number of Policies: ", totalNumPolicy
+
+
+def fileRead(filename):
+    f_c = open(filename)
+
+    keepTrackBool = 0
+
+    totalForTarget = 0
+    totalNumTargets = 0
+    totalNumCalls = 0
+
+    violationFound = 0
+
+    for line in f_c:
+
+        string = "[A2]"
+        if string in line:
+            violationFound = 1
+            break
+
+        string = "[ERROR]"
+        if string in line:
+            violationFound = 1
+            break
+
+        if (keepTrackBool == 1):
+            if line != "\n":
+                # print line.strip()
+                totalForTarget += 1
+
+        string = "========"
+        if string in line:
+            keepTrackBool = 1
+            totalNumCalls += 1
+
+        if line == "\n":
+            keepTrackBool = 0
+            totalNumTargets += totalForTarget
+            if (totalForTarget == 0):
+                totalNumCalls -= 1
+            totalForTarget = 0
+
+    if (violationFound == 0):
+        # print "Total number of indirect calls: ", totalNumCalls
+        # print "Total number of function targets: ", totalNumTargets
+
+        if (totalNumCalls != 0 and totalNumTargets != 0):
+            average = totalNumTargets / totalNumCalls
+        # print "Average number of targets per call: ", average
+        # else:
+        # print 0
+
+        return (totalNumCalls, totalNumTargets)
+    else:
+        # print "Violation Found, file ignored"
+
+        return (0, 0)
+
+
+def determineEmpty(filename):
+    if (os.stat(filename).st_size == 0):
+        return 1
+
+    else:
+        return 0
+
+
+main()
