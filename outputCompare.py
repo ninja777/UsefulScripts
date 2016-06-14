@@ -1,7 +1,13 @@
 import outputFileParsing as o
 
 
-def getFilenameonly(filename,pattern):
+def getCallInst(callName):
+    if len(callName) > 0 and callName[0] == '[':
+        callName = callName[callName.index(']') + 1:]
+        callName = callName.strip(' ')
+    return callName
+
+def getFileandDirnameonly(filename,pattern):
     #print filename
     namesplit = filename.split("/")
     filename = namesplit[len(namesplit) - 1]
@@ -67,8 +73,9 @@ if __name__ == '__main__':
     outEmptyMap = {}
     resultEmptyMap = {}
 
+    # Set up for comparison of empty files.
     for empfile in ffOutput.emptyFiles:
-        dirname, empfile = getFilenameonly(empfile,ffOutput.pattern)
+        dirname, empfile = getFileandDirnameonly(empfile,ffOutput.pattern)
         if dirname in outEmptyMap:
             filelist = outEmptyMap[dirname]
             filelist.append(empfile)
@@ -81,7 +88,7 @@ if __name__ == '__main__':
         #print "empty in: ", dirname," file :",empfile
 
     for empfile in ffResults.emptyFiles:
-        dirname, empfile = getFilenameonly(empfile, ffResults.pattern)
+        dirname, empfile = getFileandDirnameonly(empfile, ffResults.pattern)
         if dirname in resultEmptyMap:
             filelist = resultEmptyMap[dirname]
             filelist.append(empfile)
@@ -106,9 +113,72 @@ if __name__ == '__main__':
     print " "
     for dir in resultEmptyMap:
         if (not dir in outEmptyMap):
-            print "Empty files only in Output : ", dir, resultEmptyMap[dir]
+            print "Empty files only in Result : ", dir, resultEmptyMap[dir]
+
+
+    #set up for comparing the empty targets in each set of results.
+
+    outDirmaps = {}
+    resultDirmaps = {}
+    CallSites = []
+
+    for dirs in ffOutput.callSitesWithNoTargets:
+        if len(dirs) > 0:
+            dirname, fileName = getFileandDirnameonly(dirs[0],ffOutput.pattern)
+            callInst = getCallInst(dirs[1])
+            if(dirname in outDirmaps):
+                CallSites = outDirmaps[dirname]
+                CallSites.append([fileName,callInst])
+                outDirmaps[dirname] = CallSites
+            else:
+                CallSites = []
+                CallSites.append([fileName, callInst])
+                outDirmaps[dirname] = CallSites
+
+
+
+    for dirs in ffResults.callSitesWithNoTargets:
+        if len(dirs) > 0:
+            dirname, fileName = getFileandDirnameonly(dirs[0], ffResults.pattern)
+            callInst = getCallInst(dirs[1])
+            if (dirname in resultDirmaps):
+                CallSites = resultDirmaps[dirname]
+                CallSites.append([fileName, callInst])
+                resultDirmaps[dirname] = CallSites
+            else:
+                CallSites = []
+                CallSites.append([fileName, callInst])
+                resultDirmaps[dirname] = CallSites
+
+    #Compare differences in the unresolved indirect calls
+    for outdir in outDirmaps:
+        if outdir in resultDirmaps:
+            #case when directory is result map also.
+            for call1 in outDirmaps[outdir]:
+                if not call1 in resultDirmaps[outdir]:
+                    print "call site not resolved in Signature :", outdir, call1
+            for call2 in resultDirmaps[outdir]:
+                if not call2 in outDirmaps[outdir]:
+                    print "Call site not resolved in Func Pointer :",outdir, call2
+        else:
+            for call1 in outDirmaps[outdir]:
+                print "Call site not resolved in Func Pointer :", outdir, call1
+
+    for resdir in resultDirmaps:
+        if not resdir in outDirmaps:
+            for call1 in resultDirmaps[resdir]:
+                print "call site not resolved in Signature :", resdir,call1
+
+
+    # Find differences in call sites.. all !!!
+    
+
+
+
+    #     print dirs
 
     # print "*******************"
+
     # for dir in outEmptyMap:
     #     print dir, outEmptyMap[dir]
     #
