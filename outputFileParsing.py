@@ -12,6 +12,7 @@
 # ff.indirectCalls              # map of indirect calls key = filename, value = list of indirectCalls
 # ff.targets                    # map of targets key = filename_callName, value = list of targets
 # ff.callSitesWithNoTargets     # list of callsites with no targets. Each value = [filename, callName]
+# ff.dirmap                     # map of directories dirmap={dirname,filemap}, filemap={filename, indirectcallmap}, indirectcallmap={call,list oftargets}
 
 import os
 import datetime
@@ -34,6 +35,26 @@ class fileFormat():
         self.indirectCalls={}    # map of indirect calls key = filename, value = list of indirectCalls
         self.targets={}         # map of targets key = filename_callName, value = list of targets
         self.callSitesWithNoTargets = [[]] # list of callsites with no targets. Each value = [filename, callName]
+        self.dirmap = {}     # map of directories dirmap={dirname,filemap}, filemap={filename, indirectcallmap}, indirectcallmap={call,list oftargets}
+
+
+    def getCallInst(self,callName):
+        if len(callName) > 0 and callName[0] == '[':
+            callName = callName[callName.index(']') + 1:]
+            callName = callName.strip(' ')
+        return callName
+
+    def getFilenameonly(self,filename):
+        # print "Full filename :--- "
+        # print filename
+        namesplit = filename.split("/")
+        filename = namesplit[len(namesplit)-1]
+        if(filename.endswith(self.pattern)):
+            filename = filename[:-len(self.pattern)]
+        if(filename.endswith(".bc")):
+            filename = filename[:-3]
+        # print filename
+        return filename
 
     def getIndirectCalls(self, filename):
         verbose = self.verbose
@@ -51,6 +72,8 @@ class fileFormat():
         prevLine = None
         targets = []
         temp_calls = []
+        filemap = {}
+        indirectcallmap = {}
         for line in contents:
             if line == '':
                 countCalls = False
@@ -58,6 +81,9 @@ class fileFormat():
                     self.callSitesWithNoTargets.append([filename, callName])
                 else:
                     self.targets[filename + '_' + callName] = targets
+                    #create indcall to targets list map here.
+                    callInst = self.getCallInst(callName)
+                    indirectcallmap[callInst] = targets
             elif countCalls:
                 count += 1
                 targets.append(line)
@@ -69,8 +95,11 @@ class fileFormat():
                 countCalls = True
                 localTargetCount = 0
             prevLine = line
+        filenameonly = self.getFilenameonly(filename)
+        #print "indirect callmap ->>>>>>>>>>>>>>  : ", indirectcallmap
+        filemap[filenameonly] = indirectcallmap
         self.indirectCalls[filename] = temp_calls
-        return count, indirectCalls
+        return count, indirectCalls,filemap
 
     def getFileCounts(self, directory):
         verbose = self.verbose
@@ -108,7 +137,7 @@ class fileFormat():
         calls = []
         directoryStats = {}
         for dir in next(os.walk(directory))[1]:
-            # print dir
+            # print "directpry :", dir
             path = os.path.join(os.path.abspath(directory), dir)
             self.directories.append(path)
             output = os.path.join(path,outputDirectory)
@@ -126,13 +155,16 @@ class fileFormat():
             for _, _, outputFiles in os.walk(output):
                 for eachFile in outputFiles:
                     if eachFile.endswith(pattern) and (not eachFile.endswith(excludePattern)):
+                        filemap = {}
                         if verbose:
                             print "generateStatistics :: current file :", os.path.join(output, eachFile)
-                        count, indirectCalls = self.getIndirectCalls(filename=os.path.join(output, eachFile))
+                        count, indirectCalls, filemap = self.getIndirectCalls(filename=os.path.join(output, eachFile))
                         targets.append(count)
                         calls.append(indirectCalls)
                         currentDirTargets += count
                         currentDirCalls += indirectCalls
+                        #print "file map ~~~~~~~~~~~~~~~~~~~~~~~~  : ", filemap
+                        self.dirmap[dir] = filemap
 
             directoryStats[output] = [totalAnalyzed[-1], emptyFilesCount[-1], currentDirTargets, currentDirCalls]
 
@@ -232,6 +264,8 @@ if __name__ == '__main__':
     parser.add_argument('-x', '--exclude', help='Extension of files to be excluded', default=' ', type=str)
     parser.add_argument('-v','--verbose', help='Print verbose output',
                         action="store_true", default=False)
+    parser.add_argument('-c', '--compare', help='Print compare results of the individual files one on one', default=0,
+                        type=bool)
 
     args = parser.parse_args()
     directory = args.directory
@@ -239,6 +273,7 @@ if __name__ == '__main__':
     fileExtension = args.extension
     excludePattern = args.exclude
     verbose=args.verbose
+    compare=args.compare
 
     ff = fileFormat(baseDirectory=directory, outputDirectory=outDir, verbose=verbose, pattern=fileExtension, excludePattern=excludePattern)
     ff.generateStatistics()
@@ -260,7 +295,17 @@ if __name__ == '__main__':
 
     print "Average targets per call :", targets/ float(indirectCallsCount)
 
-    # generateComparison()
+    targetless = 0
+    print "Call sites with no target : ", len(ff.callSitesWithNoTargets)
+
+    #print "directory map ----------------------  ", ff.dirmap
+    # print '\n'.join(ff.callSitesWithNoTargets)
+    # for c in ff.callSitesWithNoTargets:
+    #     print c
+    # for t in ff.targets:
+    #     print t, ff.targets[t]
+
+    #generateComparison()
 
 
 
