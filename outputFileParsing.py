@@ -29,7 +29,8 @@ class fileFormat():
         self.excludePattern = excludePattern
 
         #Properties
-        self.files = []     # list of files in output/results folder
+        self.filesAbsPath = []     # list of files in output/results folder (absolute path)
+        self.filesNames = []  # list of files in output/results folder (file names only)
         self.emptyFiles = [] # list of empty files
         self.directories = []   # list of directories in Analyzed folder
         self.indirectCalls={}    # map of indirect calls key = filename, value = list of indirectCalls
@@ -113,7 +114,7 @@ class fileFormat():
             f = os.path.join(directory, f)
             if f.endswith(excludePattern) or (not f.endswith(pattern)):
                 continue
-            self.files.append(f)
+            self.filesAbsPath.append(f)
             count += 1
             statinfo = os.stat(f)
             if verbose:
@@ -169,7 +170,12 @@ class fileFormat():
             directoryStats[output] = [totalAnalyzed[-1], emptyFilesCount[-1], currentDirTargets, currentDirCalls]
 
         # print emptyFiles
+        self.populateFileNames()
         return totalAnalyzed, emptyFilesCount, targets, calls, directoryStats
+
+    def populateFileNames(self):
+        for f in self.filesAbsPath:
+            self.filesNames.append(f.split('/')[-1])
 
 def rreplace(s, old, new, occurrence=1):
     li = s.rsplit(old, occurrence)
@@ -278,7 +284,7 @@ if __name__ == '__main__':
     ff = fileFormat(baseDirectory=directory, outputDirectory=outDir, verbose=verbose, pattern=fileExtension, excludePattern=excludePattern)
     ff.generateStatistics()
 
-    print "Total analyzed :", len(ff.files)
+    print "Total analyzed :", len(ff.filesAbsPath)
     print "Empty files :", len(ff.emptyFiles)
 
     indirectCallsCount = 0

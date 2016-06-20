@@ -37,21 +37,21 @@ def getFileCounts(directory, verbose=False, pattern = 'out'):
             emptyCount += 1
     return count, emptyCount
 
-def generateStatistics(directory='output', verbose=False, pattern = 'out'):
+def generateStatistics(baseDirectory='Analyzed',resultsDirectory='output', verbose=False, pattern ='out'):
     totalAnalyzed = []
     emptyFiles = []
     targets = []
     calls = []
     directoryStats = {}
-    for dirname, dirnames, filenames in os.walk('Analyzed'):
+    for dirname, dirnames, filenames in os.walk(baseDirectory):
         # print path to all subdirectories first.
 
         for subdirname in dirnames:
-            if subdirname != directory:
+            if subdirname != resultsDirectory:
                 continue
             output = os.path.abspath('.') + '/' + os.path.join(dirname, subdirname)
             #output = path + '/' + directory
-            if (('Transformed' not in output) and ('Bitcode' not in output) and ('Results' not in output) and ('output' in output)):
+            if (('Transformed' not in output) and ('Bitcode' not in output) and ('Results' not in output) and (resultsDirectory in output)):
                 total, empties = getFileCounts(output, verbose=verbose, pattern=pattern)
 
                 totalAnalyzed.append(total)
@@ -71,14 +71,14 @@ def generateStatistics(directory='output', verbose=False, pattern = 'out'):
                             calls.append(indirectCalls)
                             dirCalls += indirectCalls
                             dirTargets += count
-                if("output" in dirname):
+                if(resultsDirectory in dirname):
                     if("output/output" not in dirname):
                         directoryStats[dirname] = [total,empties,dirTargets,dirCalls]
 
     return totalAnalyzed, emptyFiles, targets, calls, directoryStats
 
 if __name__ == '__main__':
-    totalAnalyzed, emptyFiles, targets, calls, dirStats = generateStatistics('output', verbose=True, pattern='.out')
+    totalAnalyzed, emptyFiles, targets, calls, dirStats = generateStatistics(resultsDirectory='output', verbose=True, pattern='.out')
     print "--- Results per dir ----"
     printStat = sorted(dirStats.items(), key=lambda x: x[1][3], reverse=True)
 

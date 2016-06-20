@@ -70,7 +70,7 @@ def main():
                 if string not in file_path:
                     string = "output"
                     if string in file_path:
-                        if(filename.endswith('.out')):
+                        if(filename.endswith('.sigout')):
                             print('\t- file %s (full path: %s)' % (filename, file_path))
                             totalNumEmptyPolicy += determineEmpty(file_path)
                             if (determineEmpty(file_path) == 0):
