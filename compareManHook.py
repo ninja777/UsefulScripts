@@ -2,8 +2,8 @@ import CompareEqlist as o
 
 
 
-file1 = '../server11_ifiles/results/OUT-MHOOK-AHOOK.txt'
-file2 = '../server12_ifiles/results/OUT-MHOOK-AHOOK.txt'
+file1 = 'server11_ifiles/results/OUT-MHOOK-AHOOK.txt'
+file2 = 'server12_ifiles/results/OUT-MHOOK-AHOOK.txt'
 
 a = o.ocamlMaualHooks(filename=file1)
 a.parseFile()
@@ -36,7 +36,7 @@ def isSameAutoHook(ahook,bhook):
                 return True
         else:
             return True
-
+    return False
 
 
 def compareAutohooks(aHooks,bHooks):
@@ -44,11 +44,24 @@ def compareAutohooks(aHooks,bHooks):
         for bhook in bHooks:
             if isSameAutoHook(ahook,bhook):
                 # compare ssos in matched hooks.
-                print " compare SSOs here"
+                ahook == bhook
+                # print " compare SSOs here"
                 #compare number of doms.. is same can recursively call
                 #compareAutoHooks(aDoms, bDoms)
+                break
 
 
+#use fileMap
+#for every manual hook
+#   compare anything here? number of automated hooks, print if changed
+#   for every autohook
+#      compare anything here? number of ssos and doms
+#       for every SSO
+#             compare every operand and operation
+#       for every dom
+#           compare anything here? number of ssos
+#           for every SSO
+#               compare every operand and operation
 
 
 
@@ -71,9 +84,11 @@ for afile in a.fileMap:
             if ahooknum != bhooknum:
                 print "Hooks different in File  : ", afile
                 for hook in ahooks:
+                    print ' '* 4,
                     print hook.hook, hook.fileName, hook.line, len(hook.Autohooks)
                 print "------- Hooks in B"
                 for bhook in bhooks:
+                    print ' ' * 4,
                     print bhook.hook, bhook.fileName, bhook.line, len(bhook.Autohooks)
             else:
                 for amanHook in ahooks:
@@ -84,7 +99,7 @@ for afile in a.fileMap:
                             #Same number of autohooks.
                             compareAutohooks(amanHook.Autohooks,bmanHook.Autohooks)
 
-
+            break
                 #Compare the contained autohooks.. if diff or new constrains
                 #check if only
     if filePresent == False:

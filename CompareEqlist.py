@@ -10,6 +10,17 @@ class equation():
         out += "Operations :" + ','.join(self.operations)
         return out
 
+
+    def __eq__(self, other):
+        if self.operand != other.operand:
+            print " "*8,
+            print "Operand mismatch :",self.operand, " != ",other.operand
+        if self.operations != other.operations:
+            print " "*8,
+            print "Operations mismatch for operand:", self.operand, '(',\
+                len(self.operations), ') != ', other.operand,' (',len(other.operations),')'
+        return self.operand == other.operand and self.operations == other.operations
+
 class ocamlOutputFile():
     def __init__(self, filename, verbose=False):
         self.filename = filename
@@ -127,6 +138,25 @@ class AutoHook():
         self.SSOs = []
         self.domHooks = []
 
+    # def __eq__(self, other):
+    #
+    #     selfOperands = [s.operand for s in self.SSOs]
+    #     otherOperands = [s.operand for s in other.SSOs]
+    #
+    #     for operand in selfOperands:
+    #         if operand not in otherOperands:
+    #             print " "*8,
+    #             print "Operand Removed:", operand
+    #     for operand in otherOperands:
+    #         if operand not in selfOperands:
+    #             print " "*8,
+    #             print "Operand Added:", operand
+    #
+    #     ssoMatch = self.SSOs == other.SSOs
+    #
+    #     return ssoMatch #and self.domHooks == other.domHooks
+
+
 class ManualHook():
     def __init__(self, hook, fileName, line):
         self.hook = hook
@@ -134,6 +164,8 @@ class ManualHook():
         self.line = line
         self.Autohooks = []
 
+    def __eq__(self, other):
+        return self.hook == other.hook and self.fileName == other.fileName
 
 class ocamlMaualHooks():
     def __init__(self, filename, verbose=False):
