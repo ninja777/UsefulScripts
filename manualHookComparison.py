@@ -18,6 +18,7 @@ ChangedmHooks = 0
 mhookConsAdded = 0
 mhookConsRemoved = 0
 autoHookMismatch = 0
+autohookDomsMismatch = 0
 
 def isSameAutoHook(ahook,bhook):
     if ahook.hook == bhook.hook and ahook.fileName == bhook.fileName:
@@ -51,6 +52,7 @@ for afile in a.fileMap:
         else:
             #   for every autohook
             temp = bManHooks.index(aManHooks[i])
+            # compare doms in authook
             if len(aManHooks[i].Autohooks) == len(bManHooks[temp].Autohooks):
                 for aAutoHook in aManHooks[i].Autohooks:
                     for bAutoHook in bManHooks[temp].Autohooks:
@@ -59,6 +61,7 @@ for afile in a.fileMap:
                             aOperands = [s.operand for s in aAutoHook.SSOs]
                             bOperands = [s.operand for s in bAutoHook.SSOs]
 
+                            # compare SSOs in autohook
                             for operand in aOperands:
                                 if operand not in bOperands:
                                     print " "*8,
@@ -67,16 +70,21 @@ for afile in a.fileMap:
                                 if operand not in aOperands:
                                     print " "*8,
                                     print "Operand Added:", operand
+                            allSSOs = aOperands + bOperands
                             for asso in aAutoHook.SSOs:
                                 for bsso in bAutoHook.SSOs:
                                     if asso.operand == bsso.operand:
                                         asso == bsso
-
-
+                                        allSSOs.remove(asso.operand)
+                            autohookDomsMismatch += abs(len(aAutoHook.domHooks) - len(bAutoHook.domHooks))
             else:
                 autoHookMismatch += abs(len(aManHooks[i].Autohooks) - len(bManHooks[temp].Autohooks))
     print "AutoHook mismatch :", autoHookMismatch
     autoHookMismatch = 0
+    # compare doms in authook
+    print "AutoHook doms mismatch :", autohookDomsMismatch
+    autohookDomsMismatch = 0
+
     for i in range(len(bManHooks)):
         if not bManHooks[i] in aManHooks:
             hooksAdded += 1
