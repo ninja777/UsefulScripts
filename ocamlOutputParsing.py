@@ -111,8 +111,8 @@ class ocamlMaualHooks():
             if line.startswith('[ManualHook]'):
                 if len(self.ManHooks) > 0:
                     print " In manhook present.."
-                    self.ManHooks[len(self.ManHooks)-1].AutoHooks = Autohooklist
-                    print "length of auto for man hook ", len(self.ManHooks[len(self.ManHooks)-1].AutoHooks),self.ManHooks[len(self.ManHooks)-1].hook
+                    self.ManHooks[-1].AutoHooks = Autohooklist
+                    print "length of auto for man hook ", len(self.ManHooks[-1].AutoHooks),self.ManHooks[-1].hook
                 Autohooklist = []
                 #self.ManHooks.append([])
                 line = line.split()

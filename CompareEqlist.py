@@ -140,6 +140,26 @@ class ocamlMaualHooks():
         self.filename = filename
         self.verbose = verbose
         self.ManHooks = []
+        self.unmediatedHooks = []
+        self.fileMap ={}
+
+    def createFilemap(self):
+        manHooks = []
+        for hook in self.ManHooks:
+            try:
+                self.fileMap[hook.fileName]
+            except KeyError:
+                self.fileMap[hook.fileName] = []
+            self.fileMap[hook.fileName].append(hook)
+
+            #self.fileMap[hook.fileName].append(hook)
+
+        for fileHooks in self.fileMap:
+            hooks = self.fileMap[fileHooks]
+            hooks = hooks.sort(key=lambda x: int(x.line), reverse=False)
+            #self.fileMap[fileHooks] = hooks
+
+
 
     def parseFile(self):
         f = open(self.filename, 'r')
@@ -152,15 +172,6 @@ class ocamlMaualHooks():
 
             #print len(Autohooklist)
             if line.startswith('[ManualHook]'):
-                if len(self.ManHooks) > 0:
-                    print " In manhook present.."
-                    #self.ManHooks[len(self.ManHooks) - 1].Autohooks = Autohooklist
-                    # for autohook in Autohooklist:
-                    #     aHook = copy.deepcopy(autohook)
-                    #     self.ManHooks[len(self.ManHooks)-1].Autohooks.append(aHook)
-                    # # del Autohooklist
-                    # Autohooklist = []
-                    print "length of auto for man hook ", len(self.ManHooks[len(self.ManHooks)-1].Autohooks),self.ManHooks[len(self.ManHooks)-1].hook
                 Autohooklist = []
                 #self.ManHooks.append([])
                 line = line.split()
@@ -169,9 +180,9 @@ class ocamlMaualHooks():
                 lineNumber = line[4].split('@')[1]
                 ManHook = ManualHook(hook=hookCall,fileName=filename,line=lineNumber)
                 self.ManHooks.append(ManHook)
-                print line
+                #print line
                 line = ' '.join(line[1:])
-                print "Manual Hook: ", line
+                #print "Manual Hook: ", line
 
             if line.strip().startswith('[AutoHook]'):
                 isDom = False
@@ -186,8 +197,8 @@ class ocamlMaualHooks():
                     ahook = AutoHook(hookCall, filename, lineNumber)
                 self.ManHooks[len(self.ManHooks) - 1].Autohooks.append(ahook)
                 #Autohooklist.append(ahook)
-                if line[0] == '[AutoHook]':
-                    print "Auto hook: ", line
+                # if line[0] == '[AutoHook]':
+                #     print "Auto hook: ", line
                 line = ' '.join(line[1:])
 
             if line.strip().startswith('[SSO]'):
@@ -223,9 +234,21 @@ class ocamlMaualHooks():
 
             if line.strip().startswith('[Unmediated Hook]'):
                 line = line.split()
-                if line[0] == '[Unmediated':
-                    print "Unmediated : ", line
-                line = ' '.join(line[2:])
+                #print line
+                hookName = line[2]
+                fileName = line[4].split('@')[0]
+                lineNumber = line[4].split('@')[1]
+                if hookName.startswith('Stm'):
+                    stmt = line[6].split('@')[0]
+                    ahook = AutoHook(hookName, fileName, lineNumber, stmt)
+                    ahook.ifStmt = True
+                else:
+                    ahook = AutoHook(hookName, fileName, lineNumber)
+                self.unmediatedHooks.append(ahook)
+        self.createFilemap()
+
+
+
 
 class ocamlAutoHooks():
     def __init__(self, filename, verbose=False):
@@ -263,15 +286,16 @@ if __name__ == '__main__':
     o = ocamlMaualHooks(filename=file1)
     o.parseFile()
 
-    print "Man Hooks : ", len(o.ManHooks)
-    for manHook in o.ManHooks:
-        #print manHook
-        print manHook.hook, manHook.fileName, manHook.line
-        print len(manHook.Autohooks)
-        for hook in manHook.Autohooks:
-            print hook.hook, hook.fileName, hook.line
-            print "SSO :",len(hook.SSOs)
-
+    # print "Man Hooks : ", len(o.ManHooks)
+    # for manHook in o.ManHooks:
+    #     #print manHook
+    #     print manHook.hook, manHook.fileName, manHook.line
+    #     print len(manHook.Autohooks)
+    #     for hook in manHook.Autohooks:
+    #         print hook.hook, hook.fileName, hook.line
+    #         print "SSO :",len(hook.SSOs)
+    #
+    # print "Unmediated Hooks : ", len(o.unmediatedHooks)
         #print manHook.hook, manHook.fileName, manHook.line
         #print "Dominated Autohooks :",len(manHook.Autohooks)
         #print manHook.Autohooks

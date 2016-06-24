@@ -1,8 +1,9 @@
 def findFunction(func, a):
-...     for qlist in a.eqList:
-...         for equat in qlist:
-...             if equat.operand.strip() == func:
-...                 print equat
+        for qlist in a.eqList:
+            for equat in qlist:
+                if equat.operand.strip() == func:
+                    for xx in qlist:
+                        print xx
 
 
 
@@ -14,3 +15,10 @@ Operations :read(drawable->id)
 >>> findFunction(cmd,b)
 Operand : (pParent__MapWindow)
 Operations :read(drawable->id),read(optional->otherEventMasks)
+
+
+present in 12
+====
+Operand : (pDev__set_key_up)
+Operations :write(key->down),write(key->postdown),read(key->down),read(key->postdown)
+
