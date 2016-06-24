@@ -54,8 +54,8 @@ for afile in a.fileMap:
             if len(aManHooks[i].Autohooks) == len(bManHooks[temp].Autohooks):
                 for aAutoHook in aManHooks[i].Autohooks:
                     for bAutoHook in bManHooks[temp].Autohooks:
+                        #      compare anything here? number of ssos and doms
                         if isSameAutoHook(aAutoHook, bAutoHook):
-
                             aOperands = [s.operand for s in aAutoHook.SSOs]
                             bOperands = [s.operand for s in bAutoHook.SSOs]
 
@@ -67,8 +67,10 @@ for afile in a.fileMap:
                                 if operand not in aOperands:
                                     print " "*8,
                                     print "Operand Added:", operand
-
-                            aAutoHook.SSOs == bAutoHook.SSOs
+                            for asso in aAutoHook.SSOs:
+                                for bsso in bAutoHook.SSOs:
+                                    if asso.operand == bsso.operand:
+                                        asso == bsso
 
 
             else:
@@ -82,7 +84,7 @@ for afile in a.fileMap:
 
 
 
-#      compare anything here? number of ssos and doms
+
 #       for every SSO
 #             compare every operand and operation
 #       for every dom
