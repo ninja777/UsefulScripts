@@ -29,14 +29,16 @@ class fileFormat():
         self.excludePattern = excludePattern
 
         #Properties
-        self.filesAbsPath = []     # list of files in output/results folder (absolute path)
-        self.filesNames = []  # list of files in output/results folder (file names only)
+        self.files = []     # list of files in output/results folder
         self.emptyFiles = [] # list of empty files
         self.directories = []   # list of directories in Analyzed folder
         self.indirectCalls={}    # map of indirect calls key = filename, value = list of indirectCalls
         self.targets={}         # map of targets key = filename_callName, value = list of targets
         self.callSitesWithNoTargets = [[]] # list of callsites with no targets. Each value = [filename, callName]
         self.dirmap = {}     # map of directories dirmap={dirname,filemap}, filemap={filename, indirectcallmap}, indirectcallmap={call,list oftargets}
+        self.errCalls = []   # list of all the calls with error
+        self.indirectErrorCalls={}  # map of error indirect calls key = filename, value = list of error indirectCalls
+        #self.errorDirmap = {}
 
 
     def getCallInst(self,callName):
@@ -56,6 +58,31 @@ class fileFormat():
             filename = filename[:-3]
         # print filename
         return filename
+
+    def getIndirectErrorCalls(self, filename):
+        verbose = self.verbose
+        callName = ''
+        if verbose:
+            print "getindirectCalls :: Reading file :", filename
+        f = open(filename, 'r')
+        contents = f.read()
+        f.close()
+        indirectCalls = contents.count('[ERROR]')
+        contents = contents.split('\n')
+        indirectErrorCalls = []
+        for line in contents:
+            if line.startswith("[ERROR]"):
+                #collect all indirect calls with errors.
+                line = line.split(']')
+                #print len(line)
+                if(len(line)>=2):
+                    callName = line[1]
+                    indirectErrorCalls.append(callName)
+                    self.errCalls.append(callName)
+        self.indirectErrorCalls[filename] = indirectErrorCalls
+        return  indirectErrorCalls
+
+
 
     def getIndirectCalls(self, filename):
         verbose = self.verbose
@@ -83,8 +110,9 @@ class fileFormat():
                 else:
                     self.targets[filename + '_' + callName] = targets
                     #create indcall to targets list map here.
-                    callInst = self.getCallInst(callName)
-                    indirectcallmap[callInst] = targets
+                    if len(callName) >0:
+                        callInst = self.getCallInst(callName)
+                        indirectcallmap[callInst] = targets
             elif countCalls:
                 count += 1
                 targets.append(line)
@@ -97,8 +125,8 @@ class fileFormat():
                 localTargetCount = 0
             prevLine = line
         filenameonly = self.getFilenameonly(filename)
-        #print "indirect callmap ->>>>>>>>>>>>>>  : ", indirectcallmap
-        filemap[filenameonly] = indirectcallmap
+        if(len(indirectcallmap)>0):
+            filemap[filenameonly] = indirectcallmap
         self.indirectCalls[filename] = temp_calls
         return count, indirectCalls,filemap
 
@@ -114,7 +142,7 @@ class fileFormat():
             f = os.path.join(directory, f)
             if f.endswith(excludePattern) or (not f.endswith(pattern)):
                 continue
-            self.filesAbsPath.append(f)
+            self.files.append(f)
             count += 1
             statinfo = os.stat(f)
             if verbose:
@@ -137,6 +165,7 @@ class fileFormat():
         targets = []
         calls = []
         directoryStats = {}
+        ErrorCalls = []
         for dir in next(os.walk(directory))[1]:
             # print "directpry :", dir
             path = os.path.join(os.path.abspath(directory), dir)
@@ -152,6 +181,7 @@ class fileFormat():
 
             currentDirTargets = 0
             currentDirCalls = 0
+            currentDirErrors = 0
 
             for _, _, outputFiles in os.walk(output):
                 for eachFile in outputFiles:
@@ -160,6 +190,7 @@ class fileFormat():
                         if verbose:
                             print "generateStatistics :: current file :", os.path.join(output, eachFile)
                         count, indirectCalls, filemap = self.getIndirectCalls(filename=os.path.join(output, eachFile))
+                        self.getIndirectErrorCalls(filename=os.path.join(output, eachFile))
                         targets.append(count)
                         calls.append(indirectCalls)
                         currentDirTargets += count
@@ -170,12 +201,7 @@ class fileFormat():
             directoryStats[output] = [totalAnalyzed[-1], emptyFilesCount[-1], currentDirTargets, currentDirCalls]
 
         # print emptyFiles
-        self.populateFileNames()
         return totalAnalyzed, emptyFilesCount, targets, calls, directoryStats
-
-    def populateFileNames(self):
-        for f in self.filesAbsPath:
-            self.filesNames.append(f.split('/')[-1])
 
 def rreplace(s, old, new, occurrence=1):
     li = s.rsplit(old, occurrence)
@@ -284,7 +310,7 @@ if __name__ == '__main__':
     ff = fileFormat(baseDirectory=directory, outputDirectory=outDir, verbose=verbose, pattern=fileExtension, excludePattern=excludePattern)
     ff.generateStatistics()
 
-    print "Total analyzed :", len(ff.filesAbsPath)
+    print "Total analyzed :", len(ff.files)
     print "Empty files :", len(ff.emptyFiles)
 
     indirectCallsCount = 0
@@ -303,6 +329,10 @@ if __name__ == '__main__':
 
     targetless = 0
     print "Call sites with no target : ", len(ff.callSitesWithNoTargets)
+
+
+
+    print " Error Calls : ", len(ff.errCalls)
 
     #print "directory map ----------------------  ", ff.dirmap
     # print '\n'.join(ff.callSitesWithNoTargets)

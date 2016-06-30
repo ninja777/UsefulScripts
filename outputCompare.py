@@ -1,6 +1,12 @@
 import outputFileParsing as o
 
 
+printErrorCases = False
+printUnresolved = False
+printMismatched = False
+
+
+
 def getCallInst(callName):
     if len(callName) > 0 and callName[0] == '[':
         callName = callName[callName.index(']') + 1:]
@@ -21,7 +27,7 @@ def getFileandDirnameonly(filename,pattern):
 
 if __name__ == '__main__':
     #class for Output (signature based approach)
-    ffOutput = o.fileFormat(baseDirectory='Analyzed', outputDirectory='output', verbose=False, pattern='.out1', excludePattern='.opt.out')
+    ffOutput = o.fileFormat(baseDirectory='Analyzed', outputDirectory='output', verbose=False, pattern='.out2', excludePattern='.opt.out')
     ffOutput.generateStatistics()
 
     print "---------Output for signature based analysis--------"
@@ -44,6 +50,9 @@ if __name__ == '__main__':
 
     targetless = 0
     print "Call sites with no target : ", len(ffOutput.callSitesWithNoTargets)
+
+    # print " Error Calls : ", len(ffOutput.errCalls)
+    # print ffOutput.errCalls
 
     #Create class for results..(function pointer based approach)
     ffResults = o.fileFormat(baseDirectory='Analyzed', outputDirectory='Results', verbose=False, pattern='.results', excludePattern='.opt.bc.results')
@@ -70,6 +79,13 @@ if __name__ == '__main__':
 
     targetless = 0
     print "Call sites with no target : ", len(ffResults.callSitesWithNoTargets)
+
+    print " Error Calls : ", len(ffResults.errCalls)
+    if printErrorCases:
+        for files in  ffResults.indirectErrorCalls:
+            if len(ffResults.indirectErrorCalls[files]) > 0:
+                print ffResults.indirectErrorCalls[files]
+
     outEmptyMap = {}
     resultEmptyMap = {}
 
@@ -122,58 +138,88 @@ if __name__ == '__main__':
     resultDirmaps = {}
     CallSites = []
 
-    for dirs in ffOutput.callSitesWithNoTargets:
-        if len(dirs) > 0:
-            dirname, fileName = getFileandDirnameonly(dirs[0],ffOutput.pattern)
-            callInst = getCallInst(dirs[1])
-            if(dirname in outDirmaps):
-                CallSites = outDirmaps[dirname]
-                CallSites.append([fileName,callInst])
-                outDirmaps[dirname] = CallSites
+    if printUnresolved:
+        for dirs in ffOutput.callSitesWithNoTargets:
+            if len(dirs) > 0:
+                dirname, fileName = getFileandDirnameonly(dirs[0],ffOutput.pattern)
+                callInst = getCallInst(dirs[1])
+                if(dirname in outDirmaps):
+                    CallSites = outDirmaps[dirname]
+                    CallSites.append([fileName,callInst])
+                    outDirmaps[dirname] = CallSites
+                else:
+                    CallSites = []
+                    CallSites.append([fileName, callInst])
+                    outDirmaps[dirname] = CallSites
+
+
+
+        for dirs in ffResults.callSitesWithNoTargets:
+            if len(dirs) > 0:
+                dirname, fileName = getFileandDirnameonly(dirs[0], ffResults.pattern)
+                callInst = getCallInst(dirs[1])
+                if (dirname in resultDirmaps):
+                    CallSites = resultDirmaps[dirname]
+                    CallSites.append([fileName, callInst])
+                    resultDirmaps[dirname] = CallSites
+                else:
+                    CallSites = []
+                    CallSites.append([fileName, callInst])
+                    resultDirmaps[dirname] = CallSites
+
+        #Compare differences in the unresolved indirect calls
+        for outdir in outDirmaps:
+            if outdir in resultDirmaps:
+                #case when directory is result map also.
+                for call1 in outDirmaps[outdir]:
+                    if not call1 in resultDirmaps[outdir]:
+                        print "call site not resolved in Signature :", outdir, call1
+                for call2 in resultDirmaps[outdir]:
+                    if not call2 in outDirmaps[outdir]:
+                        print "Call site not resolved in Func Pointer :",outdir, call2
             else:
-                CallSites = []
-                CallSites.append([fileName, callInst])
-                outDirmaps[dirname] = CallSites
+                for call1 in outDirmaps[outdir]:
+                    print "Call site not resolved in Func Pointer :", outdir, call1
 
-
-
-    for dirs in ffResults.callSitesWithNoTargets:
-        if len(dirs) > 0:
-            dirname, fileName = getFileandDirnameonly(dirs[0], ffResults.pattern)
-            callInst = getCallInst(dirs[1])
-            if (dirname in resultDirmaps):
-                CallSites = resultDirmaps[dirname]
-                CallSites.append([fileName, callInst])
-                resultDirmaps[dirname] = CallSites
-            else:
-                CallSites = []
-                CallSites.append([fileName, callInst])
-                resultDirmaps[dirname] = CallSites
-
-    #Compare differences in the unresolved indirect calls
-    for outdir in outDirmaps:
-        if outdir in resultDirmaps:
-            #case when directory is result map also.
-            for call1 in outDirmaps[outdir]:
-                if not call1 in resultDirmaps[outdir]:
-                    print "call site not resolved in Signature :", outdir, call1
-            for call2 in resultDirmaps[outdir]:
-                if not call2 in outDirmaps[outdir]:
-                    print "Call site not resolved in Func Pointer :",outdir, call2
-        else:
-            for call1 in outDirmaps[outdir]:
-                print "Call site not resolved in Func Pointer :", outdir, call1
-
-    for resdir in resultDirmaps:
-        if not resdir in outDirmaps:
-            for call1 in resultDirmaps[resdir]:
-                print "call site not resolved in Signature :", resdir,call1
+        for resdir in resultDirmaps:
+            if not resdir in outDirmaps:
+                for call1 in resultDirmaps[resdir]:
+                    print "call site not resolved in Signature :", resdir,call1
 
 
     # Find differences in call sites.. all !!!
-    #Again for the same dir, same files, check if all the callsites match.. 
-    #else print the recognized ones in one vs the other. 
-    
+    # Again for the same dir, same files, check if all the callsites match..
+    # else print the recognized ones in one vs the other.
+
+
+    # for call1 in ffOutput.indirectCalls:
+    #     print call1, len(ffOutput.indirectCalls[call1]), ffOutput.indirectCalls[call1]
+
+    print " "
+    print "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+    print  " "
+    print  " "
+
+
+    for outdir in ffOutput.dirmap:
+        if outdir in ffResults.dirmap:
+            # case when directory is result map also.
+         #   print "Dir    : ",outdir
+            for filemap in ffOutput.dirmap[outdir]:
+                if filemap in ffResults.dirmap[outdir]:
+           #         print filemap
+                    for indcall in ffOutput.dirmap[outdir][filemap]:
+                        if not indcall in ffResults.dirmap[outdir][filemap]:
+                            print "Indirect call not recognized in Func Pointer : ",outdir, filemap, indcall
+                    for indcall in ffResults.dirmap[outdir][filemap]:
+                        if not indcall in ffOutput.dirmap[outdir][filemap]:
+                            print "Indirect call not recognized in Signature : ",outdir, filemap, indcall
+                else:
+                    print "--------File not found in Results", filemap
+        else:
+            print "=========Dir not found in Results", outdir
+
+                    #check all call sites in each files..
 
 
 
